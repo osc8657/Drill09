@@ -20,6 +20,8 @@ def left_down(e):
 def left_up(e):
     return e[0] == 'INPUT' and e[1].type == SDL_KEYUP and e[1].key == SDLK_LEFT
 
+def a_down(e):
+    return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_a
 
 class Sleep:
     @staticmethod
@@ -67,6 +69,41 @@ class Run:
     def draw(boy):
         boy.image.clip_draw(boy.frame * 100, boy.action * 100, 100, 100, boy.x, boy.y)
 
+class Autorun:
+    @staticmethod
+    def enter(boy, e):
+        if a_down(e) and boy.action == 2:
+            boy.dir, boy.action = -1, 0
+        elif a_down(e) and boy.action == 3:
+            boy.dir, boy.action = 1, 1
+        boy.running_time = get_time()
+
+
+    @staticmethod
+    def exit(boy, e):
+        pass
+
+    @staticmethod
+    def do(boy):
+        boy.frame = (boy.frame + 1) % 8
+        boy.x += boy.dir * 15
+
+        if boy.dir == 1 and boy.x >= 800:
+            boy.x = 800
+            boy.dir, boy.action = -1, 0
+        elif boy.dir == -1 and boy.x <= 0:
+            boy.x = 0
+            boy.dir, boy.action = 1, 1
+
+        if get_time() - boy.running_time > 5:
+            boy.state_machine.handle_event(('TIME_OUT', 0))
+        pass
+
+    @staticmethod
+    def draw(boy):
+        boy.image.clip_draw(boy.frame * 100, boy.action * 100, 100, 100, boy.x, boy.y + 40, 200, 200)
+        pass
+
 class Idle:
 
     @staticmethod
@@ -77,7 +114,7 @@ class Idle:
             boy.action = 3
         boy.dir = 0
         boy.frame = 0
-        Boy.start_time = get_time() # 경과 시간 계산
+        boy.start_time = get_time() # 경과 시간 계산
         pass
 
     @staticmethod
@@ -102,8 +139,9 @@ class StateMachine:
         self.cur_state = Sleep
         self.table = {
             Sleep: {space_down: Idle, right_down: Run, left_down: Run, left_up: Run, right_up: Run},
-            Idle: {time_out: Sleep, right_down: Run, left_down: Run, left_up: Run, right_up: Run},
-            Run: {right_down: Idle, left_down: Idle, left_up: Idle, right_up: Idle}
+            Idle: {time_out: Sleep, right_down: Run, left_down: Run, left_up: Run, right_up: Run, a_down: Autorun},
+            Run: {right_down: Idle, left_down: Idle, left_up: Idle, right_up: Idle},
+            Autorun: {time_out: Idle, right_down: Run, left_down: Run, left_up: Run, right_up: Run}
         }
 
     def start(self):
